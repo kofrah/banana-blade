@@ -26,3 +26,11 @@
 - Removed shot count and replaced it with the banana blade icon.
 - Projectile now uses bevelled extruded geometry, a stem, standard light-reactive materials and directional lighting. Its local X tilt changes in flight while the parent retains the random cutting angle.
 - TypeScript and production build passed. Geometry check passed for nonzero depth, finite vertices and light-reactive materials. Physical-device visual check remains pending.
+
+# Pixel-art blade orientation and minimal controls
+
+- Uses the exact existing banana-blade.png for both faces; side-wall geometry follows its alpha silhouette to preserve the pixel-art identity.
+- Approximately 53–60 degree local Y rotation gives visible left/right foreshortening throughout flight. Animation waits for texture/silhouette readiness.
+- Removed lower left reset and lower right icon; centered shutter retained.
+- Upper right reads ONE BB, ONE CUT. Result chooses one requested phrase once per capture and remains stable during saving.
+- Removed the in-flight Japanese tagline. TypeScript and production build validation; no physical camera/browser visual verification.

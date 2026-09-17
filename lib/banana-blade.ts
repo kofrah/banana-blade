@@ -1,21 +1,28 @@
 import * as T from 'three';
 
-// A curved, bevelled solid: broad yellow faces, a bright cutting edge and a dark stem.
-export function createBananaBlade() {
- const outline=new T.Shape();
- outline.moveTo(-1.3,.42);
- outline.bezierCurveTo(-1.18,-.46,-.62,-.83,.18,-.68);
- outline.bezierCurveTo(.85,-.55,1.22,-.13,1.4,.52);
- outline.bezierCurveTo(.83,-.03,.16,-.24,-.43,-.03);
- outline.bezierCurveTo(-.83,.09,-1.05,.31,-1.3,.42);
- const bodyGeometry=new T.ExtrudeGeometry(outline,{depth:.2,bevelEnabled:true,bevelThickness:.065,bevelSize:.055,bevelSegments:3,curveSegments:24,steps:1});
- bodyGeometry.translate(0,.15,-.1);
- const gold=new T.MeshStandardMaterial({color:0xffdf22,metalness:.32,roughness:.27});
- const rim=new T.MeshStandardMaterial({color:0xfff4a1,metalness:.68,roughness:.21});
- const body=new T.Mesh(bodyGeometry,[gold,rim]);
- const stemGeometry=new T.CylinderGeometry(.065,.09,.24,8);
- const stemMaterial=new T.MeshStandardMaterial({color:0x594128,roughness:.62});
- const stem=new T.Mesh(stemGeometry,stemMaterial);stem.position.set(-1.24,.58,0);stem.rotation.z=-.4;
- const group=new T.Group();group.add(body,stem);
- return {group,dispose(){bodyGeometry.dispose();stemGeometry.dispose();gold.dispose();rim.dispose();stemMaterial.dispose()}};
+// Keep the exact pixel-art face. Extrude only its opaque silhouette into side walls.
+export function createBananaBlade(){
+ const group=new T.Group(),width=2.5,height=1.25,depth=.14;
+ const faceGeometry=new T.PlaneGeometry(width,height);
+ const faceMaterial=new T.MeshBasicMaterial({transparent:true,alphaTest:.5,side:T.DoubleSide});
+ const sideMaterial=new T.MeshStandardMaterial({color:0xd8a521,metalness:.2,roughness:.38});
+ const front=new T.Mesh(faceGeometry,faceMaterial),back=new T.Mesh(faceGeometry,faceMaterial);
+ front.position.z=depth/2;back.position.z=-depth/2;group.add(front,back);
+ let ready=false,failed=false,disposed=false,sideGeometry:T.BufferGeometry|undefined;
+ const texture=new T.TextureLoader().load('/banana-blade.png',tex=>{
+ if(disposed){tex.dispose();return}
+ try{
+ const cols=192,rows=96,canvas=document.createElement('canvas');canvas.width=cols;canvas.height=rows;
+ const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas unavailable');
+ ctx.drawImage(tex.image,0,0,cols,rows);const pixels=ctx.getImageData(0,0,cols,rows).data;
+ const opaque=(x:number,y:number)=>x>=0&&x<cols&&y>=0&&y<rows&&pixels[(y*cols+x)*4+3]>=128;
+ const positions:number[]=[];
+ const wall=(ax:number,ay:number,bx:number,by:number)=>{positions.push(ax,ay,-depth/2,bx,by,-depth/2,bx,by,depth/2,ax,ay,-depth/2,bx,by,depth/2,ax,ay,depth/2)};
+ for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){if(!opaque(x,y))continue;const l=(x/cols-.5)*width,r=((x+1)/cols-.5)*width,t=(.5-y/rows)*height,b=(.5-(y+1)/rows)*height;
+ if(!opaque(x-1,y))wall(l,b,l,t);if(!opaque(x+1,y))wall(r,t,r,b);if(!opaque(x,y-1))wall(l,t,r,t);if(!opaque(x,y+1))wall(r,b,l,b)}
+ sideGeometry=new T.BufferGeometry();sideGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));sideGeometry.computeVertexNormals();sideMaterial.side=T.DoubleSide;group.add(new T.Mesh(sideGeometry,sideMaterial));ready=true;
+ }catch{failed=true}
+ },undefined,()=>{failed=true});
+ texture.colorSpace=T.SRGBColorSpace;texture.magFilter=T.NearestFilter;faceMaterial.map=texture;
+ return {group,get ready(){return ready},get failed(){return failed},dispose(){disposed=true;faceGeometry.dispose();sideGeometry?.dispose();faceMaterial.dispose();sideMaterial.dispose();texture.dispose()}};
 }

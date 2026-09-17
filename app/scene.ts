@@ -24,9 +24,9 @@ export function playSlice(host:HTMLDivElement,photo:HTMLCanvasElement,onCut:()=>
  let raf=0,cut=false,finished=false,previous=0,elapsed=0,result="";
  const velocities=[normal.clone().multiplyScalar(.52).add(new T.Vector3(0,.7,.25)),normal.clone().multiplyScalar(-.52).add(new T.Vector3(0,.55,-.15))];
  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
- function frame(now:number){if(!previous)previous=now;const dt=Math.min((now-previous)/1000,.04);previous=now;elapsed+=dt;
+ function frame(now:number){if(banana.failed){onError();return}if(!banana.ready){previous=now;raf=requestAnimationFrame(frame);return}if(!previous)previous=now;const dt=Math.min((now-previous)/1000,.04);previous=now;elapsed+=dt;
  const pop=Math.min(elapsed/.42,1);whole.scale.setScalar(.86+.14*(1-Math.pow(1-pop,3)));whole.rotation.y=(1-pop)*-.2;whole.rotation.x=(1-pop)*.08;
- if(elapsed>.75&&elapsed<1.28){blade.visible=true;blade.position.z=7-((elapsed-.75)/.53)*12;blade.scale.setScalar(reduced?.75:1);banana.group.rotation.x=reduced?-.35:-.55+((elapsed-.75)/.53)*.8}else blade.visible=false;
+ if(elapsed>.75&&elapsed<1.28){blade.visible=true;blade.position.z=7-((elapsed-.75)/.53)*12;blade.scale.setScalar(reduced?.75:1);banana.group.rotation.y=reduced?1.0:1.05-Math.sin(((elapsed-.75)/.53)*Math.PI)*.12}else blade.visible=false;
  if(elapsed>=1.06&&!cut){cut=true;scene.remove(whole);pieces.forEach(p=>scene.add(p));onCut()}
  if(cut){pieces.forEach((p,i)=>{velocities[i].y-=3.4*dt;p.position.addScaledVector(velocities[i],dt);p.rotation.x+=(i?-.48:.38)*dt;p.rotation.z+=(i?-.22:.18)*dt;p.rotation.y+=(i?.26:-.3)*dt;if(p.position.y< -9)p.visible=false});if(elapsed>3.2){material.transparent=true;material.opacity=Math.max(0,1-(elapsed-3.2)/.5)}}
  renderer.render(scene,camera);
