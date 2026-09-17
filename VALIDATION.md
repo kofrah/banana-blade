@@ -20,3 +20,9 @@
 - Explicit save uses file sharing when supported and a PNG download otherwise. Cancellation leaves the result intact.
 - Reset clears the in-memory preview. No automatic photo persistence or upload.
 - TypeScript and production build passed. Device-specific native share/download behavior has not been tested on a physical phone.
+
+# Solid banana projectile
+
+- Removed shot count and replaced it with the banana blade icon.
+- Projectile now uses bevelled extruded geometry, a stem, standard light-reactive materials and directional lighting. Its local X tilt changes in flight while the parent retains the random cutting angle.
+- TypeScript and production build passed. Geometry check passed for nonzero depth, finite vertices and light-reactive materials. Physical-device visual check remains pending.
