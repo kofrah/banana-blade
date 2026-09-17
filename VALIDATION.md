@@ -12,3 +12,11 @@
 - Client-only photo processing; no photo storage or upload.
 - Manual return to camera after the animation; reset can interrupt it.
 - No audio in this MVP.
+
+# Result preview and optional save
+
+- After the fall animation, show the actual 3D split captured shortly after impact as a 1200 × 1200 PNG.
+- Reuse that same PNG for preview and saving; no second random split.
+- Explicit save uses file sharing when supported and a PNG download otherwise. Cancellation leaves the result intact.
+- Reset clears the in-memory preview. No automatic photo persistence or upload.
+- TypeScript and production build passed. Device-specific native share/download behavior has not been tested on a physical phone.
