@@ -48,7 +48,7 @@ export default function Home(){
  return <main className="camera-app">
  <video ref={video} autoPlay playsInline muted className="live-video" style={{visibility:cameraVisible&&status==='ready'?'visible':'hidden'}} onLoadedData={()=>{if(stream.current)setStatus('ready')}} onPlaying={()=>{if(stream.current)setStatus('ready')}} aria-label="カメラのライブプレビュー"/>
  <div ref={host} className="scene" style={{visibility:cameraVisible?'hidden':'visible'}} aria-label="撮影した写真の3D切断アニメーション"/>
- <header><div className="wordmark">BANANA<br/>BLADE<span>AS A SERVICE</span></div><span className="edition">ONE BB, ONE CUT</span></header>
+ <header><div className="brand"><span className="brand-symbol" aria-hidden="true"><img src="/blade-normal.png" alt=""/></span><div className="wordmark">BANANA<br/>BLADE<span>AS A SERVICE</span></div></div><span className="edition">ONE BB, ONE CUT</span></header>
  <div className="camera-status"><b/>{cameraVisible?(status==='ready'?'LIVE CAMERA':'CAMERA / STANDBY'):phase==='done'?'SLICE COMPLETE':cut?(isRare?'RARE SLICE!':'NICE SLICE.'):isRare?'RARE BANANA INCOMING':'BANANA INCOMING'}</div>
  {cameraVisible&&<div className="viewfinder" aria-hidden="true"><i/><i/><i/><i/></div>}
  {cameraVisible&&status!=='ready'&&<section className="camera-message" aria-live="polite"><Camera size={28}/><h1>{status==='error'?'カメラをつなごう。':'BANANA BLADE slice your photo.'}</h1><p>{status==='error'?error:'カメラの使用を許可すると、撮影できます。'}</p>{status==='error'&&<button onClick={()=>void startCamera()}>カメラに再接続 <ArrowUpRight size={16} style={{display:'inline',verticalAlign:'middle'}}/></button>}</section>}
