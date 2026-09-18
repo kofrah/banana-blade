@@ -57,3 +57,8 @@
 - Changed camera introduction and page title to BANANA BLADE slice your photo.
 - Rare particle/ring group is hidden only while rendering the exported frame, then restored for the live animation. The composed image still includes the requested rare blade icon and captions.
 - Regression check passed: entire effect group is hidden during capture and restored on both success and failure. TypeScript and production build passed; phone rendering not verified.
+
+# Cutting-edge-first flight
+
+- Reversed blade pitch to -1.15 radians and removed incidental yaw so the convex outer edge (left side of upright reference sprites) leads along negative Z, away from the camera.
+- Vector check confirms the outer-edge direction has Z < -0.9 across the full ±15-degree cutting range. TypeScript and production build passed.

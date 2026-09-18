@@ -2,7 +2,9 @@ import * as T from 'three';
 
 export function createBananaBlade(rare=false){
  const group=new T.Group(),shape=new T.Group();group.add(shape);
- // Source sword stands upright. Lay its long axis across the flight direction.
+ // Upright sprite: convex cutting edge is on its left (-X).
+ // Rotate that edge to +Y; the flight group pitches -1.15 radians
+ // so the outer edge leads toward -Z (away from the camera).
  shape.rotation.z=-Math.PI/2;
  const depth=.11,faceMaterial=new T.MeshBasicMaterial({transparent:true,alphaTest:.5,side:T.DoubleSide});
  const sideMaterial=new T.MeshStandardMaterial({color:rare?0xffd95c:0xb98919,metalness:.3,roughness:.4,side:T.DoubleSide});

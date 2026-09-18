@@ -35,7 +35,7 @@ export function playSlice(host:HTMLDivElement,photo:HTMLCanvasElement,count:numb
  const pop=Math.min(elapsed/.42,1);whole.scale.setScalar(.86+.14*(1-Math.pow(1-pop,3)));whole.rotation.y=(1-pop)*-.2;whole.rotation.x=(1-pop)*.08;
  const shot=Math.floor((elapsed-flightStart)/spacing),local=elapsed-flightStart-shot*spacing;
  blade.visible=shot>=0&&shot<count&&local<flightDuration;
- if(blade.visible){const step=steps[shot];blade.position.set(step.target.x,step.target.y,7-local/flightDuration*12);blade.rotation.z=step.angle;blade.scale.setScalar(reduced?.75:1);banana.group.rotation.x=1.15;banana.group.rotation.y=.08}
+ if(blade.visible){const step=steps[shot];blade.position.set(step.target.x,step.target.y,7-local/flightDuration*12);blade.rotation.z=step.angle;blade.scale.setScalar(reduced?.75:1);banana.group.rotation.set(-1.15,0,0)}
  if(cuts<count&&elapsed>=flightStart+cuts*spacing+impactOffset){
  if(cuts===0)scene.remove(whole);else stages[cuts-1].forEach(mesh=>scene.remove(mesh));
  stages[cuts].forEach(mesh=>scene.add(mesh));rareEffect?.trigger(steps[cuts].target.x,steps[cuts].target.y);cuts++;onCut();
