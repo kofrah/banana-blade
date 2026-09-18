@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Banana Blade — 撮って、スパッと。',
+  title: 'Banana Blade — BANANA BLADE slice your photo.',
   description: 'シャッターを押すと、バナナブレイドが写真を切断。撮って遊ぶ小さなカメラ。',
 };
 

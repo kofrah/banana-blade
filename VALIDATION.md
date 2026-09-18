@@ -51,3 +51,9 @@
 - Blades lie along the horizontal axis, pitched 1.15 radians, with shallow random cut angle limited to ±15 degrees. Original aspect and alpha silhouette determine mesh dimensions.
 - Rare impacts emit gold particles and an expanding ring, reduced in reduced-motion mode, and include the effect/rare icon in the saved result.
 - TypeScript and production build passed. Tests passed for rare probability boundary, horizontal angle bounds, finite particle coordinates and effect cleanup. Mobile visual verification pending.
+
+# Clean result capture
+
+- Changed camera introduction and page title to BANANA BLADE slice your photo.
+- Rare particle/ring group is hidden only while rendering the exported frame, then restored for the live animation. The composed image still includes the requested rare blade icon and captions.
+- Regression check passed: entire effect group is hidden during capture and restored on both success and failure. TypeScript and production build passed; phone rendering not verified.

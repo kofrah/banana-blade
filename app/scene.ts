@@ -45,8 +45,8 @@ export function playSlice(host:HTMLDivElement,photo:HTMLCanvasElement,count:numb
  rareEffect?.update(dt);
  renderer.render(scene,camera);
  if(!result&&elapsed>=lastImpact+.44){
- const oldRatio=renderer.getPixelRatio();renderer.setPixelRatio(1);renderer.setSize(1200,1200,false);camera.aspect=1;camera.position.z=7.5;camera.updateProjectionMatrix();renderer.render(scene,camera);
- try{result=composeResult(renderer.domElement,banana.image,resultLine,rare)}catch{onError();return}
+ const oldRatio=renderer.getPixelRatio();renderer.setPixelRatio(1);renderer.setSize(1200,1200,false);camera.aspect=1;camera.position.z=7.5;camera.updateProjectionMatrix();
+ try{const capture=()=>{renderer.render(scene,camera);return composeResult(renderer.domElement,banana.image,resultLine,rare)};result=rareEffect?rareEffect.withoutEffect(capture):capture()}catch{onError();return}
  renderer.setPixelRatio(oldRatio);resize();renderer.render(scene,camera);
  }
  if(elapsed>lastImpact+2.74){onDone(result);return}raf=requestAnimationFrame(frame);
