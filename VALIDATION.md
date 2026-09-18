@@ -62,3 +62,10 @@
 
 - Reversed blade pitch to -1.15 radians and removed incidental yaw so the convex outer edge (left side of upright reference sprites) leads along negative Z, away from the camera.
 - Vector check confirms the outer-edge direction has Z < -0.9 across the full ±15-degree cutting range. TypeScript and production build passed.
+
+# Front camera and album
+
+- Added front/back camera switching. Stops old streams before acquiring new ones, invalidates stale requests, and mirrors both front-camera preview and captured image consistently.
+- Added album file selection without forced capture, usable even with camera permission denied. File cancellation leaves the camera state unchanged; same-file re-selection works.
+- Browser-decodable images are rendered proportionally to a canvas capped at 1600 px and enter the shared cut/result/export flow. Decode errors offer retry/album selection; temporary object URLs are revoked.
+- No photo uploads or persistence were introduced. TypeScript and production build passed. Real-device camera switching, native album pickers and image-format support need physical-device verification.
