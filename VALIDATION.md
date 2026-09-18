@@ -42,3 +42,12 @@
 - Captured result PNG is 1200 × 1440 with SLICED BY BANANA BLADE. above, the same per-shot RESULT phrase below, and the original blade icon in its lower-right photo area.
 - TypeScript and production build passed. 1,200 deterministic multi-cut cases preserve area and keep fragments above 0.5% of original area. Compositor contract check confirms caption ordering, selected phrase, dimensions and icon inclusion.
 - Phone camera, visual animation and native saving remain unverified on physical devices.
+
+# Supplied normal and rare blades
+
+- User image 1 is normal; image 2 is rare. Built-in imagegen removed only gray backgrounds, preserving upright pixel-art designs. Outputs: public/blade-normal.png and public/blade-rare.png; inspected alpha cutouts.
+- Edit prompt for each source: Remove ONLY the gray background, replacing it with genuine alpha transparency. Keep the complete sword unchanged: upright orientation, silhouette, colors/highlights, handle/blade details, proportions and composition. No redesign, rotation, shadow, glow, checkerboard or cropping.
+- Each capture has a 10% rare probability; all 1–3 projectiles in that capture share the chosen design.
+- Blades lie along the horizontal axis, pitched 1.15 radians, with shallow random cut angle limited to ±15 degrees. Original aspect and alpha silhouette determine mesh dimensions.
+- Rare impacts emit gold particles and an expanding ring, reduced in reduced-motion mode, and include the effect/rare icon in the saved result.
+- TypeScript and production build passed. Tests passed for rare probability boundary, horizontal angle bounds, finite particle coordinates and effect cleanup. Mobile visual verification pending.
