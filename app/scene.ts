@@ -1,7 +1,8 @@
 import * as T from 'three';
 import {createBananaBlade} from '../lib/banana-blade';
-import {splitPolygon,type Point} from '../lib/slice';
-export function playSlice(host:HTMLDivElement,photo:HTMLCanvasElement,onCut:()=>void,onDone:(result:string)=>void,onError:()=>void){
+import {planCuts,type Point} from '../lib/slice';
+import {composeResult} from '../lib/result-image';
+export function playSlice(host:HTMLDivElement,photo:HTMLCanvasElement,count:number,resultLine:string,onCut:()=>void,onDone:(result:string)=>void,onError:()=>void){
  let renderer:T.WebGLRenderer;
  try{renderer=new T.WebGLRenderer({antialias:true,alpha:true})}catch{onError();return ()=>{}}
  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.setClearColor(0x171914,1);host.appendChild(renderer.domElement);
@@ -9,34 +10,43 @@ export function playSlice(host:HTMLDivElement,photo:HTMLCanvasElement,onCut:()=>
  const texture=new T.CanvasTexture(photo);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
  const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide});
  const edge=new T.MeshBasicMaterial({color:0xc7cbbb});
- const ratio=photo.width/photo.height;let h=Math.min(3.8,3.9/ratio),w=h*ratio;
+ const ratio=photo.width/photo.height,h=Math.min(3.8,3.9/ratio),w=h*ratio;
  const rect:Point[]=[{x:-w/2,y:-h/2},{x:w/2,y:-h/2},{x:w/2,y:h/2},{x:-w/2,y:h/2}];
- const geometries:T.BufferGeometry[]=[];const materials:T.Material[]=[material,edge];
- function card(poly:Point[]){const shape=new T.Shape();shape.moveTo(poly[0].x,poly[0].y);poly.slice(1).forEach(p=>shape.lineTo(p.x,p.y));shape.closePath();const geo=new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:false,steps:1});const pos=geo.getAttribute('position'),uv=geo.getAttribute('uv');for(let i=0;i<pos.count;i++)uv.setXY(i,(pos.getX(i)+w/2)/w,(pos.getY(i)+h/2)/h);uv.needsUpdate=true;geometries.push(geo);const mesh=new T.Mesh(geo,[material,edge]);return mesh}
+ const geometries:T.BufferGeometry[]=[];
+ function card(poly:Point[]){const shape=new T.Shape();shape.moveTo(poly[0].x,poly[0].y);poly.slice(1).forEach(p=>shape.lineTo(p.x,p.y));shape.closePath();const geo=new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:false,steps:1});const pos=geo.getAttribute('position'),uv=geo.getAttribute('uv');for(let i=0;i<pos.count;i++)uv.setXY(i,(pos.getX(i)+w/2)/w,(pos.getY(i)+h/2)/h);uv.needsUpdate=true;geometries.push(geo);return new T.Mesh(geo,[material,edge])}
  const whole=card(rect);scene.add(whole);
- const angle=Math.random()*Math.PI;const normal=new T.Vector3(-Math.sin(angle),Math.cos(angle),0);
- const pieces=splitPolygon(rect,angle,(Math.random()-.5)*Math.min(w,h)*.18).map(p=>card(p));
- const banana=createBananaBlade();const blade=new T.Group();blade.add(banana.group);blade.rotation.z=angle;blade.position.z=7;blade.visible=false;scene.add(blade);
+ const steps=planCuts(rect,count),stages=steps.map(step=>step.polygons.map(card));
+ const banana=createBananaBlade(),blade=new T.Group();blade.add(banana.group);blade.visible=false;scene.add(blade);
  scene.add(new T.HemisphereLight(0xffffff,0x5b6133,2.1));
  const key=new T.DirectionalLight(0xffffff,3.4);key.position.set(-3,5,7);scene.add(key);
  const rimLight=new T.DirectionalLight(0xffdf65,2);rimLight.position.set(4,-1,-3);scene.add(rimLight);
  const resize=()=>{const width=host.clientWidth,height=host.clientHeight;renderer.setSize(width,height);camera.aspect=width/height;camera.position.z=Math.max(9,(w+1.3)/(2*Math.tan(T.MathUtils.degToRad(20))*camera.aspect));camera.updateProjectionMatrix()};resize();const observer=new ResizeObserver(resize);observer.observe(host);
- let raf=0,cut=false,finished=false,previous=0,elapsed=0,result="";
- const velocities=[normal.clone().multiplyScalar(.52).add(new T.Vector3(0,.7,.25)),normal.clone().multiplyScalar(-.52).add(new T.Vector3(0,.55,-.15))];
+ const spacing=.64,flightStart=.75,flightDuration=.53,impactOffset=flightDuration*7/12,lastImpact=flightStart+(count-1)*spacing+impactOffset;
+ let raf=0,cuts=0,previous=0,elapsed=0,result='';
+ const finalPolygons=steps[count-1].polygons;
+ const velocities=finalPolygons.map(poly=>{const center=poly.reduce<T.Vector3>((a,p)=>a.add(new T.Vector3(p.x/poly.length,p.y/poly.length,0)),new T.Vector3());return center.normalize().multiplyScalar(.62).add(new T.Vector3(0,.6,0))});
  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
- function frame(now:number){if(banana.failed){onError();return}if(!banana.ready){previous=now;raf=requestAnimationFrame(frame);return}if(!previous)previous=now;const dt=Math.min((now-previous)/1000,.04);previous=now;elapsed+=dt;
+ function frame(now:number){
+ if(banana.failed){onError();return}if(!banana.ready){previous=now;raf=requestAnimationFrame(frame);return}
+ if(!previous)previous=now;const dt=Math.min((now-previous)/1000,.04);previous=now;elapsed+=dt;
  const pop=Math.min(elapsed/.42,1);whole.scale.setScalar(.86+.14*(1-Math.pow(1-pop,3)));whole.rotation.y=(1-pop)*-.2;whole.rotation.x=(1-pop)*.08;
- if(elapsed>.75&&elapsed<1.28){blade.visible=true;blade.position.z=7-((elapsed-.75)/.53)*12;blade.scale.setScalar(reduced?.75:1);banana.group.rotation.y=reduced?1.0:1.05-Math.sin(((elapsed-.75)/.53)*Math.PI)*.12}else blade.visible=false;
- if(elapsed>=1.06&&!cut){cut=true;scene.remove(whole);pieces.forEach(p=>scene.add(p));onCut()}
- if(cut){pieces.forEach((p,i)=>{velocities[i].y-=3.4*dt;p.position.addScaledVector(velocities[i],dt);p.rotation.x+=(i?-.48:.38)*dt;p.rotation.z+=(i?-.22:.18)*dt;p.rotation.y+=(i?.26:-.3)*dt;if(p.position.y< -9)p.visible=false});if(elapsed>3.2){material.transparent=true;material.opacity=Math.max(0,1-(elapsed-3.2)/.5)}}
- renderer.render(scene,camera);
- // Keep the actual 3D fragments shortly after impact, before they leave the frame.
- if(cut&&!result&&elapsed>=1.5){
- const oldAspect=camera.aspect,oldZ=camera.position.z,oldRatio=renderer.getPixelRatio();
- renderer.setPixelRatio(1);renderer.setSize(1200,1200,false);camera.aspect=1;camera.position.z=7.5;camera.updateProjectionMatrix();
- renderer.render(scene,camera);result=renderer.domElement.toDataURL('image/png');
- renderer.setPixelRatio(oldRatio);camera.aspect=oldAspect;camera.position.z=oldZ;resize();renderer.render(scene,camera);
+ const shot=Math.floor((elapsed-flightStart)/spacing),local=elapsed-flightStart-shot*spacing;
+ blade.visible=shot>=0&&shot<count&&local<flightDuration;
+ if(blade.visible){const step=steps[shot];blade.position.set(step.target.x,step.target.y,7-local/flightDuration*12);blade.rotation.z=step.angle;blade.scale.setScalar(reduced?.75:1);banana.group.rotation.y=reduced?1.0:1.05-Math.sin(local/flightDuration*Math.PI)*.12}
+ if(cuts<count&&elapsed>=flightStart+cuts*spacing+impactOffset){
+ if(cuts===0)scene.remove(whole);else stages[cuts-1].forEach(mesh=>scene.remove(mesh));
+ stages[cuts].forEach(mesh=>scene.add(mesh));cuts++;onCut();
  }
- if(elapsed>3.8&&!finished){finished=true;onDone(result);return}raf=requestAnimationFrame(frame)}raf=requestAnimationFrame(frame);
- return()=>{cancelAnimationFrame(raf);observer.disconnect();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());texture.dispose();banana.dispose();renderer.dispose();renderer.domElement.remove()};
+ // Complete the quick burst before allowing fragments to fall away from the target.
+ if(cuts===count){stages[count-1].forEach((piece,i)=>{velocities[i].y-=3.4*dt;piece.position.addScaledVector(velocities[i],dt);piece.rotation.x+=(i%2?-.48:.38)*dt;piece.rotation.z+=(i%2?-.22:.18)*dt;piece.rotation.y+=(i%2?.26:-.3)*dt;if(piece.position.y< -9)piece.visible=false});if(elapsed>lastImpact+2.1){material.transparent=true;material.opacity=Math.max(0,1-(elapsed-lastImpact-2.1)/.5)}}
+ renderer.render(scene,camera);
+ if(!result&&elapsed>=lastImpact+.44){
+ const oldRatio=renderer.getPixelRatio();renderer.setPixelRatio(1);renderer.setSize(1200,1200,false);camera.aspect=1;camera.position.z=7.5;camera.updateProjectionMatrix();renderer.render(scene,camera);
+ try{result=composeResult(renderer.domElement,banana.image,resultLine)}catch{onError();return}
+ renderer.setPixelRatio(oldRatio);resize();renderer.render(scene,camera);
+ }
+ if(elapsed>lastImpact+2.74){onDone(result);return}raf=requestAnimationFrame(frame);
+ }
+ raf=requestAnimationFrame(frame);
+ return()=>{cancelAnimationFrame(raf);observer.disconnect();geometries.forEach(g=>g.dispose());material.dispose();edge.dispose();texture.dispose();banana.dispose();renderer.dispose();renderer.domElement.remove()};
 }

@@ -34,3 +34,11 @@
 - Removed lower left reset and lower right icon; centered shutter retained.
 - Upper right reads ONE BB, ONE CUT. Result chooses one requested phrase once per capture and remains stable during saving.
 - Removed the in-flight Japanese tagline. TypeScript and production build validation; no physical camera/browser visual verification.
+
+# Branded result and one-to-three blade bursts
+
+- Shutter-right count control cycles 1 → 2 → 3 → 1 and locks during capture/animation.
+- Each projectile slices the largest remaining polygon at a new random angle; the quick burst completes before fragments fall. One/two/three blades produce two/three/four pieces.
+- Captured result PNG is 1200 × 1440 with SLICED BY BANANA BLADE. above, the same per-shot RESULT phrase below, and the original blade icon in its lower-right photo area.
+- TypeScript and production build passed. 1,200 deterministic multi-cut cases preserve area and keep fragments above 0.5% of original area. Compositor contract check confirms caption ordering, selected phrase, dimensions and icon inclusion.
+- Phone camera, visual animation and native saving remain unverified on physical devices.

@@ -24,5 +24,5 @@ export function createBananaBlade(){
  }catch{failed=true}
  },undefined,()=>{failed=true});
  texture.colorSpace=T.SRGBColorSpace;texture.magFilter=T.NearestFilter;faceMaterial.map=texture;
- return {group,get ready(){return ready},get failed(){return failed},dispose(){disposed=true;faceGeometry.dispose();sideGeometry?.dispose();faceMaterial.dispose();sideMaterial.dispose();texture.dispose()}};
+ return {group,get image(){return texture.image as CanvasImageSource},get ready(){return ready},get failed(){return failed},dispose(){disposed=true;faceGeometry.dispose();sideGeometry?.dispose();faceMaterial.dispose();sideMaterial.dispose();texture.dispose()}};
 }
