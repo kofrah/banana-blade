@@ -69,3 +69,10 @@
 - Added album file selection without forced capture, usable even with camera permission denied. File cancellation leaves the camera state unchanged; same-file re-selection works.
 - Browser-decodable images are rendered proportionally to a canvas capped at 1600 px and enter the shared cut/result/export flow. Decode errors offer retry/album selection; temporary object URLs are revoked.
 - No photo uploads or persistence were introduced. TypeScript and production build passed. Real-device camera switching, native album pickers and image-format support need physical-device verification.
+
+# Camera and slice audio
+
+- Added short locally synthesized Web Audio shutter and impact sounds. Rare impacts layer a brief harmonic sparkle.
+- Camera gesture unlocks audio; shutter plays only after a successful capture, and stale/delayed capture sounds are discarded. Album picker unlocks audio without a shutter sound.
+- Each actual onCut callback plays one impact, including two/three-blade sequences. Hidden pages skip playback. Audio failures do not block the application; nodes/context are cleaned up on unmount.
+- TypeScript and production build passed. Sample checks at 44.1 and 48 kHz passed for all effects: finite, non-silent, bounded amplitude, short duration and fade to silence. Physical-device audio playback and listening quality not verified.
