@@ -1,8 +1,9 @@
 'use client';
-import {Camera,ArrowUpRight,Download,SwitchCamera,Images} from 'lucide-react';
+import {Camera,ArrowUpRight,Download,SwitchCamera,Images,Volume2,TriangleAlert} from 'lucide-react';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {chooseRareBlade} from '../lib/blade-variant';
 import {createSoundEngine} from '../lib/sound';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {playSlice} from './scene';
 const resultLines=['BANANA BLADE IS ETERNAL.','BANANA BLADE IS RITUAL.','BANANA BLADE IS EVERLASTING.','If you have a BANANA BLADE, you have everything.'];
 type Phase='camera'|'loading'|'playing'|'done';
@@ -18,14 +19,17 @@ export default function Home(){
  const [facing,setFacing]=useState<'environment'|'user'>('environment');
  const sound=useRef<ReturnType<typeof createSoundEngine>|null>(null);
  const getSound=useCallback(()=>{if(!sound.current)sound.current=createSoundEngine();return sound.current},[]);
+ const [showNotice,setShowNotice]=useState(true);
+ const acknowledged=useRef(false);
  const savingRef=useRef(false);
  const stopStream=useCallback(()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null},[]);
- const startCamera=useCallback(async()=>{const id=++generation.current;stopStream();setStatus('starting');setError('');
+ const startCamera=useCallback(async()=>{if(!acknowledged.current)return;const id=++generation.current;stopStream();setStatus('starting');setError('');
  try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('unsupported');const s=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:facingRef.current==='user'?{exact:'user'}:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});if(!mounted.current||id!==generation.current){s.getTracks().forEach(t=>t.stop());return}stream.current=s;const actual=s.getVideoTracks()[0].getSettings().facingMode;setFacing(actual==='user'?'user':actual==='environment'?'environment':facingRef.current);
  s.getVideoTracks()[0].addEventListener('ended',()=>{if(mounted.current&&id===generation.current){setStatus('error');setError('カメラとの接続が切れました。もう一度接続してください。')}});
  if(video.current){video.current.srcObject=s;await video.current.play()}
  }catch(e){if(!mounted.current||id!==generation.current)return;stopStream();setStatus('error');const name=e instanceof Error?e.name:'';setError(name==='NotAllowedError'?'カメラの使用を許可してください。ブラウザの設定から許可したあと、もう一度お試しください。':(name==='NotFoundError'||name==='OverconstrainedError')?'選択したカメラが見つかりません。カメラを切り替えるか、アルバムから写真を選んでください。':name==='NotReadableError'?'カメラを使用できません。ほかのカメラアプリを閉じて、もう一度お試しください。':'カメラに接続できません。Safari や Chrome などのブラウザで開き直してお試しください。')}},[stopStream]);
- useEffect(()=>{mounted.current=true;void startCamera();return()=>{mounted.current=false;generation.current++;stopStream();cleanup.current?.();sound.current?.dispose();sound.current=null}},[startCamera,stopStream]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;stopStream();cleanup.current?.();sound.current?.dispose();sound.current=null}},[startCamera,stopStream]);
+ const begin=()=>{if(acknowledged.current)return;acknowledged.current=true;setShowNotice(false);void getSound().unlock();void startCamera()};
  const reset=useCallback(()=>{generation.current++;busy.current=false;cleanup.current?.();cleanup.current=null;setFlash(false);setCut(false);setResult('');setSaveMessage('');setPhase('camera');void startCamera()},[startCamera]);
  const switchCamera=useCallback(()=>{if(phase!=='camera'||busy.current)return;facingRef.current=facingRef.current==='environment'?'user':'environment';void startCamera()},[phase,startCamera]);
  const runPhoto=useCallback(async(photo:HTMLCanvasElement,id:number)=>{
@@ -61,6 +65,8 @@ export default function Home(){
  useEffect(()=>{type Tool={name:string;description:string;inputSchema:object;annotations:{readOnlyHint:boolean};execute:(input:unknown)=>unknown};const mc=(document as Document&{modelContext?:{registerTool:(t:Tool,o:{signal:AbortSignal})=>void}}).modelContext;if(!mc)return;const abort=new AbortController();const valid=(input:unknown)=>{if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new Error('Expected an empty object')};try{mc.registerTool({name:'get_camera_state',description:'Read camera readiness and the current Banana Blade animation state. Does not access the photo.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true},execute(input){valid(input);return {phase:actions.current.phase,camera:actions.current.status}}},{signal:abort.signal});mc.registerTool({name:'reset_banana_blade',description:'Reset the current animation and return to the camera. May request camera permission.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:false},async execute(input){valid(input);actions.current.reset();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return {phase:actions.current.phase}}},{signal:abort.signal})}catch{}return()=>abort.abort()},[]);
  const cameraVisible=phase==='camera';
  return <main className="camera-app">
+ <Dialog open={showNotice} onOpenChange={()=>{}}><DialogContent showCloseButton={false} className="start-notice"><DialogTitle className="notice-title">はじめる前に</DialogTitle><DialogDescription className="notice-description">3つだけ確認して、バナナブレイドを楽しもう。</DialogDescription><ul className="notice-items"><li><Camera size={23}/><div><strong>カメラを使用します</strong><p>撮影にはカメラの許可が必要です。アルバムの写真も使えます。</p></div></li><li><TriangleAlert size={23}/><div><strong>周りに気をつけて</strong><p>歩きながら使わず、安全な場所で周囲の人や物に注意して遊んでください。</p></div></li><li><Volume2 size={23}/><div><strong>音声をオンに</strong><p>シャッター音と斬撃音が鳴ります。マナーモードを解除し、周囲に配慮した音量でお楽しみください。</p></div></li></ul><button className="notice-start" onClick={begin}>確認して、はじめる</button></DialogContent></Dialog>
+
  <video ref={video} autoPlay playsInline muted className="live-video" style={{visibility:cameraVisible&&status==='ready'?'visible':'hidden',transform:facing==='user'?'scaleX(-1)':undefined}} onLoadedData={()=>{if(stream.current)setStatus('ready')}} onPlaying={()=>{if(stream.current)setStatus('ready')}} aria-label="カメラのライブプレビュー"/>
  <input ref={fileInput} type="file" accept="image/*" hidden onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';void selectPhoto(file)}}/>
  <div ref={host} className="scene" style={{visibility:cameraVisible?'hidden':'visible'}} aria-label="撮影した写真の3D切断アニメーション"/>
