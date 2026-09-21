@@ -22,21 +22,7 @@ export default function Home(){
  const [showNotice,setShowNotice]=useState(true);
  const acknowledged=useRef(false);
  const savingRef=useRef(false);
- const [showTweet,setShowTweet]=useState(false),[sharing,setSharing]=useState(false),[shareMessage,setShareMessage]=useState('');
- const sharingRef=useRef(false);
- const tweetText=`${resultLine}\n#bananablade`;
  const tweetUrl=`https://twitter.com/intent/tweet?${new URLSearchParams({text:resultLine,hashtags:'bananablade'})}`;
- const resultFile=()=>{const binary=atob(result.split(',')[1]);return new File([Uint8Array.from(binary,c=>c.charCodeAt(0))],`banana-blade-${Date.now()}.png`,{type:'image/png'})};
- const downloadTweetImage=()=>{try{const file=resultFile(),url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);setShareMessage('画像を保存したら、Xの投稿画面で添付してください。')}catch{setShareMessage('結果画像を長押しして保存してください。')}};
- const shareTweet=async()=>{
- if(!result||sharingRef.current)return;sharingRef.current=true;setSharing(true);setShareMessage('');
- try{const data={files:[resultFile()],text:tweetText};
- if(!navigator.share||!navigator.canShare?.(data)){setShareMessage('この環境では画像共有を利用できません。下の手順で画像を保存して投稿してください。');return}
- await navigator.share(data);
- setShareMessage('共有メニューを閉じました。投稿状況はXで確認してください。');
- }catch(e){setShareMessage(e instanceof Error&&e.name==='AbortError'?'共有をキャンセルしました。':'共有を開けませんでした。下の手順でも投稿できます。')}
- finally{sharingRef.current=false;if(mounted.current)setSharing(false)}
- };
  const stopStream=useCallback(()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null},[]);
  const startCamera=useCallback(async()=>{if(!acknowledged.current)return;const id=++generation.current;stopStream();setStatus('starting');setError('');
  try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('unsupported');const s=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:facingRef.current==='user'?{exact:'user'}:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});if(!mounted.current||id!==generation.current){s.getTracks().forEach(t=>t.stop());return}stream.current=s;const actual=s.getVideoTracks()[0].getSettings().facingMode;setFacing(actual==='user'?'user':actual==='environment'?'environment':facingRef.current);
@@ -66,13 +52,8 @@ export default function Home(){
  try{
  const binary=atob(result.split(',')[1]);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
  const file=new File([bytes],`banana-blade-${Date.now()}.png`,{type:'image/png'});
- if(navigator.canShare?.({files:[file]})){
- await navigator.share({files:[file],title:'Banana Blade — Result'});
- if(id===generation.current)setSaveMessage('保存・共有メニューを閉じました。');
- }else{
  const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
- if(id===generation.current)setSaveMessage('PNG画像のダウンロードを開始しました。');
- }
+ if(id===generation.current)setSaveMessage('画像のダウンロードを開始しました。Xの投稿画面で画像を添付してください。');
  }catch(e){if(id===generation.current)setSaveMessage(e instanceof Error&&e.name==='AbortError'?'保存はキャンセルされました。':'保存メニューを開けませんでした。結果画像を長押しして保存することもできます。')}
  finally{savingRef.current=false;if(mounted.current)setSaving(false)}
  },[result]);
@@ -82,7 +63,6 @@ export default function Home(){
  return <main className="camera-app">
  <Dialog open={showNotice} onOpenChange={()=>{}}><DialogContent showCloseButton={false} className="start-notice"><DialogTitle className="notice-title">はじめる前に</DialogTitle><DialogDescription className="notice-description">3つだけ確認して、バナナブレイドを楽しもう。</DialogDescription><ul className="notice-items"><li><Camera size={23}/><div><strong>カメラを使用します</strong><p>撮影にはカメラの許可が必要です。アルバムの写真も使えます。</p></div></li><li><TriangleAlert size={23}/><div><strong>周りに気をつけて</strong><p>歩きながら使わず、安全な場所で周囲の人や物に注意して遊んでください。</p></div></li><li><Volume2 size={23}/><div><strong>音声をオンに</strong><p>シャッター音と斬撃音が鳴ります。マナーモードを解除し、周囲に配慮した音量でお楽しみください。</p></div></li></ul><button className="notice-start" onClick={begin}>確認して、はじめる</button></DialogContent></Dialog>
 
- <Dialog open={showTweet} onOpenChange={open=>{if(!sharing)setShowTweet(open)}}><DialogContent className="tweet-dialog" showCloseButton={!sharing}><DialogTitle>Xに投稿する</DialogTitle><DialogDescription>切断した写真を #bananablade 付きでシェア。</DialogDescription><p className="tweet-copy">{tweetText}</p><button className="save-result" onClick={()=>void shareTweet()} disabled={sharing}>{sharing?'共有メニューを開いています…':'写真付きで共有する'}</button><p className="tweet-help">共有先でXを選んでください。投稿前に写真とハッシュタグをご確認ください。</p><details><summary>共有先にXがない・写真や文字が入らない場合</summary><p className="tweet-help">画像を保存してからXを開き、保存した画像を添付してください。投稿文には #bananablade が入ります。</p><button className="retake-result" onClick={downloadTweetImage} disabled={sharing}><Download size={16}/>1. 画像を保存</button><a className="tweet-link" href={tweetUrl} target="_blank" rel="noopener noreferrer">2. Xの投稿画面を開く <ArrowUpRight size={16}/></a></details><p role="status" className="tweet-help">{shareMessage}</p></DialogContent></Dialog>
  <video ref={video} autoPlay playsInline muted className="live-video" style={{visibility:cameraVisible&&status==='ready'?'visible':'hidden',transform:facing==='user'?'scaleX(-1)':undefined}} onLoadedData={()=>{if(stream.current)setStatus('ready')}} onPlaying={()=>{if(stream.current)setStatus('ready')}} aria-label="カメラのライブプレビュー"/>
  <input ref={fileInput} type="file" accept="image/*" hidden onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';void selectPhoto(file)}}/>
  <div ref={host} className="scene" style={{visibility:cameraVisible?'hidden':'visible'}} aria-label="撮影した写真の3D切断アニメーション"/>
@@ -92,7 +72,7 @@ export default function Home(){
  {cameraVisible&&<div className="viewfinder" aria-hidden="true"><i/><i/><i/><i/></div>}
  {cameraVisible&&status!=='ready'&&<section className="camera-message" aria-live="polite"><Camera size={28}/><h1>{status==='error'?'カメラをつなごう。':'BANANA BLADE slice your photo.'}</h1><p>{status==='error'?error:'カメラの使用を許可すると、撮影できます。'}</p>{status==='error'&&<button onClick={()=>void startCamera()}>カメラに再接続 <ArrowUpRight size={16} style={{display:'inline',verticalAlign:'middle'}}/></button>}</section>}
  {phase==='loading'&&<div className="camera-message" role="status"><img className="loader" src={isRare?'/blade-rare.png':'/blade-normal.png'} alt=""/><p>バナナ、準備中。</p></div>}
- {phase==='done'&&<section className="result result-review" aria-label="切断結果"><div className="result-heading"><span>RESULT</span><p className="result-line">{resultLine}</p><h2>{isRare?'RARE SLICE!':'NICE SLICE.'}</h2></div>{result&&<img className="result-image" src={result} alt="撮影した写真を切断した結果。上下のメッセージとバナナブレイドのアイコン付き"/>}<div className="result-actions"><button className="save-result" onClick={()=>void saveResult()} disabled={saving||!result}><Download size={18}/>{saving?'保存メニューを開いています…':'結果を保存する'}</button><button className="tweet-result" onClick={()=>{setShareMessage('');setShowTweet(true)}} disabled={saving||!result}>Xに投稿する <ArrowUpRight size={18}/></button><button className="retake-result" onClick={reset} disabled={saving}>もう一度撮る <ArrowUpRight size={16}/></button><p className="save-message" role="status">{saveMessage||'気に入ったら保存。保存せずに次の一枚へ進めます。'}</p></div></section>}
+ {phase==='done'&&<section className="result result-review" aria-label="切断結果"><div className="result-heading"><span>RESULT</span><p className="result-line">{resultLine}</p><h2>{isRare?'RARE SLICE!':'NICE SLICE.'}</h2></div>{result&&<img className="result-image" src={result} alt="撮影した写真を切断した結果。上下のメッセージとバナナブレイドのアイコン付き"/>}<div className="result-actions"><button className="save-result" onClick={()=>void saveResult()} disabled={saving||!result}><Download size={18}/>{saving?'保存しています…':'1. 画像を保存する'}</button><a className="tweet-result" href={tweetUrl} target="_blank" rel="noopener noreferrer">2. Xに投稿する <ArrowUpRight size={18}/></a><button className="retake-result" onClick={reset} disabled={saving}>もう一度撮る <ArrowUpRight size={16}/></button><p className="save-message" role="status">{saveMessage||'画像を保存してからXを開き、保存した画像を添付してください。#bananablade は入力済みです。'}</p></div></section>}
  {phase!=='done'&&<footer><div className="mode">{cameraVisible?'PHOTO / SLICE':`${bladeCount} BB / ${bladeCount} CUT${bladeCount>1?'S':''}`}</div><div className="controls"><button className="album-button" onClick={()=>{void getSound().unlock();fileInput.current?.click()}} disabled={!cameraVisible} aria-label="アルバムから写真を選ぶ"><Images size={23}/><span>アルバム</span></button><button className="shutter" onClick={()=>void shoot()} disabled={!cameraVisible||status!=='ready'} aria-label="写真を撮影して自動切断"><span/></button><button className="blade-count" onClick={()=>setBladeCount(n=>n%3+1)} disabled={!cameraVisible} aria-label={`バナナブレイド ${bladeCount}本。タップして本数を変更`}><span aria-hidden="true">{Array.from({length:bladeCount},(_,i)=><img key={i} src="/blade-normal.png" alt="" style={{transform:`translateY(${i*2}px) rotate(65deg)`}}/>)}</span><b aria-live="polite">{bladeCount}本</b></button></div>{cameraVisible&&<p className="hint">シャッターを押す。その先は、バナナにおまかせ。</p>}</footer>}{flash&&<div className="flash"/>}
  </main>
 }
