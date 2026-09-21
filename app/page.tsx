@@ -1,5 +1,5 @@
 'use client';
-import {Camera,ArrowUpRight,Download,SwitchCamera,Images,Volume2,TriangleAlert} from 'lucide-react';
+import {Camera,ArrowUpRight,Download,SwitchCamera,Images,Volume2,TriangleAlert,Share2} from 'lucide-react';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {chooseRareBlade} from '../lib/blade-variant';
 import {createSoundEngine} from '../lib/sound';
@@ -22,7 +22,8 @@ export default function Home(){
  const [showNotice,setShowNotice]=useState(true);
  const acknowledged=useRef(false);
  const savingRef=useRef(false);
- const tweetUrl=`https://twitter.com/intent/tweet?${new URLSearchParams({text:resultLine,hashtags:'bananablade'})}`;
+ const [sharing,setSharing]=useState(false);
+ const sharingRef=useRef(false);
  const stopStream=useCallback(()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null},[]);
  const startCamera=useCallback(async()=>{if(!acknowledged.current)return;const id=++generation.current;stopStream();setStatus('starting');setError('');
  try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('unsupported');const s=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:facingRef.current==='user'?{exact:'user'}:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});if(!mounted.current||id!==generation.current){s.getTracks().forEach(t=>t.stop());return}stream.current=s;const actual=s.getVideoTracks()[0].getSettings().facingMode;setFacing(actual==='user'?'user':actual==='environment'?'environment':facingRef.current);
@@ -47,16 +48,29 @@ export default function Home(){
  try{const image=new Image();image.src=url;await image.decode();if(id!==generation.current||!mounted.current)return;if(!image.naturalWidth||!image.naturalHeight)throw new Error('Invalid image');const photo=document.createElement('canvas'),scale=Math.min(1,1600/Math.max(image.naturalWidth,image.naturalHeight));photo.width=Math.max(1,Math.round(image.naturalWidth*scale));photo.height=Math.max(1,Math.round(image.naturalHeight*scale));const ctx=photo.getContext('2d');if(!ctx)throw new Error();ctx.drawImage(image,0,0,photo.width,photo.height);await runPhoto(photo,id)}catch{inputFailed(id,'この写真を読み込めませんでした。JPEG・PNGなど、ブラウザで開ける写真を選んでください。')}finally{URL.revokeObjectURL(url)}
  },[phase,stopStream,runPhoto,inputFailed,getSound]);
  const saveResult=useCallback(async()=>{
- if(!result||savingRef.current)return;
+ if(!result||savingRef.current||sharingRef.current)return;
  savingRef.current=true;setSaving(true);setSaveMessage('');const id=generation.current;
  try{
  const binary=atob(result.split(',')[1]);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
  const file=new File([bytes],`banana-blade-${Date.now()}.png`,{type:'image/png'});
  const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
- if(id===generation.current)setSaveMessage('画像のダウンロードを開始しました。Xの投稿画面で画像を添付してください。');
- }catch(e){if(id===generation.current)setSaveMessage(e instanceof Error&&e.name==='AbortError'?'保存はキャンセルされました。':'保存メニューを開けませんでした。結果画像を長押しして保存することもできます。')}
+ if(id===generation.current)setSaveMessage('画像のダウンロードを開始しました。');
+ }catch(e){if(id===generation.current)setSaveMessage(e instanceof Error&&e.name==='AbortError'?'保存はキャンセルされました。':'画像を保存できませんでした。結果画像を長押しして保存することもできます。')}
  finally{savingRef.current=false;if(mounted.current)setSaving(false)}
  },[result]);
+ const shareResult=async()=>{
+ if(!result||sharingRef.current||savingRef.current)return;
+ sharingRef.current=true;setSharing(true);setSaveMessage('');const id=generation.current;
+ try{
+ const binary=atob(result.split(',')[1]);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+ const file=new File([bytes],`banana-blade-${Date.now()}.png`,{type:'image/png'});
+ const data={files:[file],text:`${resultLine}\n#bananablade`};
+ if(!navigator.share||!navigator.canShare?.(data)){setSaveMessage('このブラウザでは写真の共有に対応していません。「画像を保存する」から保存し、お好きなアプリで共有してください。');return}
+ await navigator.share(data);
+ if(mounted.current&&id===generation.current)setSaveMessage('共有メニューを閉じました。');
+ }catch(e){if(mounted.current&&id===generation.current)setSaveMessage(e instanceof Error&&e.name==='AbortError'?'共有をキャンセルしました。':'共有メニューを開けませんでした。画像を保存して共有することもできます。')}
+ finally{sharingRef.current=false;if(mounted.current)setSharing(false)}
+ };
  const actions=useRef({reset,shoot,phase,status});actions.current={reset,shoot,phase,status};
  useEffect(()=>{type Tool={name:string;description:string;inputSchema:object;annotations:{readOnlyHint:boolean};execute:(input:unknown)=>unknown};const mc=(document as Document&{modelContext?:{registerTool:(t:Tool,o:{signal:AbortSignal})=>void}}).modelContext;if(!mc)return;const abort=new AbortController();const valid=(input:unknown)=>{if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new Error('Expected an empty object')};try{mc.registerTool({name:'get_camera_state',description:'Read camera readiness and the current Banana Blade animation state. Does not access the photo.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true},execute(input){valid(input);return {phase:actions.current.phase,camera:actions.current.status}}},{signal:abort.signal});mc.registerTool({name:'reset_banana_blade',description:'Reset the current animation and return to the camera. May request camera permission.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:false},async execute(input){valid(input);actions.current.reset();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return {phase:actions.current.phase}}},{signal:abort.signal})}catch{}return()=>abort.abort()},[]);
  const cameraVisible=phase==='camera';
@@ -72,7 +86,7 @@ export default function Home(){
  {cameraVisible&&<div className="viewfinder" aria-hidden="true"><i/><i/><i/><i/></div>}
  {cameraVisible&&status!=='ready'&&<section className="camera-message" aria-live="polite"><Camera size={28}/><h1>{status==='error'?'カメラをつなごう。':'BANANA BLADE slice your photo.'}</h1><p>{status==='error'?error:'カメラの使用を許可すると、撮影できます。'}</p>{status==='error'&&<button onClick={()=>void startCamera()}>カメラに再接続 <ArrowUpRight size={16} style={{display:'inline',verticalAlign:'middle'}}/></button>}</section>}
  {phase==='loading'&&<div className="camera-message" role="status"><img className="loader" src={isRare?'/blade-rare.png':'/blade-normal.png'} alt=""/><p>バナナ、準備中。</p></div>}
- {phase==='done'&&<section className="result result-review" aria-label="切断結果"><div className="result-heading"><span>RESULT</span><p className="result-line">{resultLine}</p><h2>{isRare?'RARE SLICE!':'NICE SLICE.'}</h2></div>{result&&<img className="result-image" src={result} alt="撮影した写真を切断した結果。上下のメッセージとバナナブレイドのアイコン付き"/>}<div className="result-actions"><button className="save-result" onClick={()=>void saveResult()} disabled={saving||!result}><Download size={18}/>{saving?'保存しています…':'画像を保存する'}</button><a className="tweet-result" href={tweetUrl} target="_blank" rel="noopener noreferrer">Xに投稿する <ArrowUpRight size={18}/></a><button className="retake-result" onClick={reset} disabled={saving}>もう一度撮る <ArrowUpRight size={16}/></button><p className="save-message" role="status">{saveMessage||'写真は自動添付されません。画像を保存し、Xの投稿画面の画像ボタンから添付してください。#bananablade は入力済みです。'}</p></div></section>}
+ {phase==='done'&&<section className="result result-review" aria-label="切断結果"><div className="result-heading"><span>RESULT</span><p className="result-line">{resultLine}</p><h2>{isRare?'RARE SLICE!':'NICE SLICE.'}</h2></div>{result&&<img className="result-image" src={result} alt="撮影した写真を切断した結果。上下のメッセージとバナナブレイドのアイコン付き"/>}<div className="result-actions"><button className="save-result" onClick={()=>void saveResult()} disabled={saving||sharing||!result}><Download size={18}/>{saving?'保存しています…':'画像を保存する'}</button><button className="share-result" onClick={()=>void shareResult()} disabled={saving||sharing||!result}><Share2 size={18}/>{sharing?'共有メニューを開いています…':'共有する'}</button><button className="retake-result" onClick={reset} disabled={saving||sharing}>もう一度撮る <ArrowUpRight size={16}/></button><p className="save-message" role="status">{saveMessage||'写真と #bananablade を共有できます。共有先のアプリを選んでください。'}</p></div></section>}
  {phase!=='done'&&<footer><div className="mode">{cameraVisible?'PHOTO / SLICE':`${bladeCount} BB / ${bladeCount} CUT${bladeCount>1?'S':''}`}</div><div className="controls"><button className="album-button" onClick={()=>{void getSound().unlock();fileInput.current?.click()}} disabled={!cameraVisible} aria-label="アルバムから写真を選ぶ"><Images size={23}/><span>アルバム</span></button><button className="shutter" onClick={()=>void shoot()} disabled={!cameraVisible||status!=='ready'} aria-label="写真を撮影して自動切断"><span/></button><button className="blade-count" onClick={()=>setBladeCount(n=>n%3+1)} disabled={!cameraVisible} aria-label={`バナナブレイド ${bladeCount}本。タップして本数を変更`}><span aria-hidden="true">{Array.from({length:bladeCount},(_,i)=><img key={i} src="/blade-normal.png" alt="" style={{transform:`translateY(${i*2}px) rotate(65deg)`}}/>)}</span><b aria-live="polite">{bladeCount}本</b></button></div>{cameraVisible&&<p className="hint">シャッターを押す。その先は、バナナにおまかせ。</p>}</footer>}{flash&&<div className="flash"/>}
  </main>
 }
